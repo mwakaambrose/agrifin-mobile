@@ -4,10 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
-import '../data/cycle_repository.dart';
 import 'viewmodels/cycle_viewmodel.dart';
 
 class CycleListScreen extends StatelessWidget {
+  const CycleListScreen({super.key});
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
@@ -95,12 +95,95 @@ class _CycleBody extends StatelessWidget {
                             '${c.startDate.split(' ')[0]} → ${c.endDate.split(' ')[0]}',
                             style: GoogleFonts.redHatDisplay(),
                           ),
-                          trailing: Text(
-                            c.isCurrent ? 'Active' : 'Closed',
-                            style: GoogleFonts.redHatDisplay(
-                              color: c.isCurrent ? Colors.green : Colors.grey,
-                            ),
-                          ),
+                          trailing:
+                              c.isCurrent
+                                  ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 8.0,
+                                        ),
+                                        child: Text(
+                                          'Active',
+                                          style: GoogleFonts.redHatDisplay(
+                                            color: Colors.green,
+                                          ),
+                                        ),
+                                      ),
+                                      TextButton.icon(
+                                        onPressed: () async {
+                                          // Capture dependencies before async gap to satisfy lints
+                                          final messenger =
+                                              ScaffoldMessenger.of(context);
+                                          final vm =
+                                              context.read<CycleViewModel>();
+                                          final confirm = await showDialog<
+                                            bool
+                                          >(
+                                            context: context,
+                                            builder:
+                                                (ctx) => AlertDialog(
+                                                  title: const Text(
+                                                    'Close Cycle?',
+                                                  ),
+                                                  content: const Text(
+                                                    'Closing a cycle will prevent further transactions in this cycle. Proceed?',
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            ctx,
+                                                            false,
+                                                          ),
+                                                      child: const Text(
+                                                        'Cancel',
+                                                      ),
+                                                    ),
+                                                    FilledButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            ctx,
+                                                            true,
+                                                          ),
+                                                      child: const Text(
+                                                        'Close',
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                          );
+                                          if (confirm == true) {
+                                            await vm.closeCycle(c.id);
+                                            if (vm.error != null) {
+                                              messenger.showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Failed to close: ${vm.error}',
+                                                  ),
+                                                ),
+                                              );
+                                            } else {
+                                              messenger.showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Cycle closed'),
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        icon: const Icon(Icons.lock),
+                                        label: const Text('Close'),
+                                      ),
+                                    ],
+                                  )
+                                  : Text(
+                                    'Closed',
+                                    style: GoogleFonts.redHatDisplay(
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                         ),
                       ),
                     ),

@@ -15,11 +15,18 @@ class HomeViewModel extends BaseViewModel {
   double get cycleProgressValue {
     final s = _summary;
     if (s == null) return 0;
-    if (s.cycleProgressPercent != null) {
-      return (s.cycleProgressPercent!.clamp(0, 100)) / 100.0;
+    // Prefer meetings-based ratio for visual consistency with the  X/Y label
+    if (s.meetingsScheduled > 0) {
+      final ratio = s.meetingsCompleted / s.meetingsScheduled;
+      return ratio.clamp(0, 1);
     }
-    if (s.meetingsScheduled == 0) return 0;
-    return (s.meetingsCompleted / s.meetingsScheduled).clamp(0, 1);
+    // Fallback to server-provided percent; handle both 0..1 and 0..100 inputs
+    if (s.cycleProgressPercent != null) {
+      final p = s.cycleProgressPercent!;
+      if (p <= 1) return p.clamp(0, 1);
+      return (p.clamp(0, 100)) / 100.0;
+    }
+    return 0;
   }
 
   String get cycleProgressLabel {

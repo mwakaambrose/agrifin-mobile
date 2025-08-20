@@ -1,7 +1,6 @@
 import 'package:agrifinity/features/cycle/data/api/cycles_api_repository.dart';
 
 import '../../../common/viewmodels/base_viewmodel.dart';
-import '../../data/cycle_model.dart';
 
 class CycleViewModel extends BaseViewModel {
   final CyclesApiRepository _repo;
@@ -80,9 +79,11 @@ class CycleViewModel extends BaseViewModel {
     setBusy(true);
     try {
       await _repo.closeCycle(cycleId);
+      // Refresh the closed cycle from server to ensure status/isCurrent are accurate
+      final updated = await _repo.show(cycleId);
       final index = cycles.indexWhere((c) => c.id == cycleId);
       if (index != -1) {
-        cycles[index] = cycles[index].copyWith(status: 'completed');
+        cycles[index] = updated;
       }
     } catch (e) {
       setError(e.toString());
