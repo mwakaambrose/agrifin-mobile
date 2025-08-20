@@ -3,10 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:agrifinity/features/meetings/data/meeting_status_service.dart';
 import 'package:agrifinity/features/meetings/presentation/active_meeting_banner.dart';
-import 'package:agrifinity/features/auth/data/auth_repository.dart';
 import 'package:provider/provider.dart';
 import 'presentation/home_viewmodel.dart';
 import 'package:agrifinity/core/session/user_session.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +19,16 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   int? _activeMeetingId;
   late final HomeViewModel _vm;
+
+  String _formatUGX(num? amount) {
+    if (amount == null) return '—';
+    final f = NumberFormat.currency(
+      locale: 'en_UG',
+      symbol: 'UGX ',
+      decimalDigits: 0,
+    );
+    return f.format(amount);
+  }
 
   @override
   void initState() {
@@ -66,13 +76,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
           final userName = context.watch<UserSession>().name;
           final List<(String title, IconData icon, String route)> items = [
-            ('Savings', Icons.savings, '/savings'),
-            ('Loans', Icons.account_balance, '/loans'),
-            ('Fines', Icons.receipt_long, '/fines'),
-            ('Social Fund', Icons.favorite, '/social'),
+            // ('Savings', Icons.savings, '/savings'),
+            // ('Loans', Icons.account_balance, '/loans'),
+            // ('Fines', Icons.receipt_long, '/fines'),
             ('Meetings', Icons.groups, '/meetings'),
             ('Members', Icons.people, '/members'),
             ('Notifications', Icons.notifications, '/notifications'),
+            ('Social Fund', Icons.favorite, '/social'),
           ];
           return Scaffold(
             appBar: AppBar(
@@ -326,9 +336,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          vm.summary == null
-                                              ? '—'
-                                              : 'UGX ${vm.summary!.totalOutstandingLoan.toStringAsFixed(0)}',
+                                          _formatUGX(
+                                            vm.summary?.totalOutstandingLoan,
+                                          ),
                                           style: GoogleFonts.redHatDisplay(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 18,
@@ -355,9 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          vm.summary == null
-                                              ? '—'
-                                              : 'UGX ${vm.summary!.totalSavings.toStringAsFixed(0)}',
+                                          _formatUGX(vm.summary?.totalSavings),
                                           style: GoogleFonts.redHatDisplay(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 18,
