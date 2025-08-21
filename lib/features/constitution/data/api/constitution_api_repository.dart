@@ -11,6 +11,8 @@ class ConstitutionDto {
   final double welfareAmount;
   final int minGuarantors;
   final String meetingFrequency;
+  final String meetingDay;
+  final int meetingCount;
   final double lateFine;
   final double absentFine;
   final double missedSavingsFine;
@@ -27,6 +29,8 @@ class ConstitutionDto {
     required this.welfareAmount,
     required this.minGuarantors,
     required this.meetingFrequency,
+    required this.meetingDay,
+    required this.meetingCount,
     required this.lateFine,
     required this.absentFine,
     required this.missedSavingsFine,
@@ -45,6 +49,8 @@ class ConstitutionDto {
         welfareAmount: _parseDouble(json['welfare_amount']),
         minGuarantors: _parseInt(json['min_guarantors']),
         meetingFrequency: (json['meeting_frequency'] ?? '').toString(),
+        meetingDay: (json['meeting_day'] ?? '').toString(),
+        meetingCount: _parseInt(json['meeting_count']),
         lateFine: _parseDouble(json['late_fine']),
         absentFine: _parseDouble(json['absent_fine']),
         missedSavingsFine: _parseDouble(json['missed_savings_fine']),

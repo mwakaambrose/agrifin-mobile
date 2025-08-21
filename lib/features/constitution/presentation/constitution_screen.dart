@@ -18,6 +18,10 @@ class _ConstitutionScreenState extends State<ConstitutionScreen> {
       child: Builder(
         builder: (context) {
           final vm = ConstitutionProvider.of(context);
+          // Hydrate defaults from backend for current cycle
+          final appCtx = context.read<CurrentContext>();
+          final cid = appCtx.cycleId ?? 1;
+          vm.hydrateFromApiIfNeeded(cid);
           return AnimatedBuilder(
             animation: vm,
             builder: (context, _) {
@@ -261,7 +265,8 @@ class _SectionTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(section.body, style: GoogleFonts.redHatDisplay()),
+              if (section.kind == SectionKind.generic)
+                Text(section.body, style: GoogleFonts.redHatDisplay()),
               if (section.kind != SectionKind.generic) ...[
                 const SizedBox(height: 8),
                 _SettingsPreview(section: section),
@@ -336,7 +341,15 @@ class _SettingsPreview extends StatelessWidget {
     switch (section.kind) {
       case SectionKind.savings:
         return Text(
-          'Freq: ${section.settings['frequency']}  Min: ${section.settings['minContribution']}  Fixed: ${section.settings['fixedAmount']} ${section.settings['fixedAmount'] ? '(${section.settings['fixedAmountValue']})' : ''}  Penalty/Miss: ${section.settings['penaltyPerMiss']}',
+          'Contribution Freq: ${section.settings['frequency']}  Min: ${section.settings['minContribution']}  Fixed: ${section.settings['fixedAmount']} ${section.settings['fixedAmount'] ? '(${section.settings['fixedAmountValue']})' : ''}  Penalty/Miss: ${section.settings['penaltyPerMiss']}',
+          style: GoogleFonts.redHatDisplay(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.secondary,
+          ),
+        );
+      case SectionKind.meetings:
+        return Text(
+          'Freq: ${section.settings['frequency']}  Day: ${section.settings['meetingDay'] ?? '-'}  Count: ${section.settings['meetingCount'] ?? '-'}',
           style: GoogleFonts.redHatDisplay(
             fontSize: 12,
             color: Theme.of(context).colorScheme.secondary,
@@ -344,7 +357,7 @@ class _SettingsPreview extends StatelessWidget {
         );
       case SectionKind.loans:
         return Text(
-          'Interest: ${section.settings['interestType']} ${section.settings['interestRate']}%  Max*Savings: ${section.settings['maxMultipleSavings']}  Penalty: ${section.settings['penaltyRate']}%  MaxDur: ${section.settings['maxDurationWeeks']}w',
+          'Min Guarantors: ${section.settings['minGuarantors'] ?? 1}  Interest: ${section.settings['interestType']} ${section.settings['interestRate']}%  Max*Savings: ${section.settings['maxMultipleSavings']}  Penalty: ${section.settings['penaltyRate']}%  MaxDur: ${section.settings['maxDurationWeeks']}w',
           style: GoogleFonts.redHatDisplay(
             fontSize: 12,
             color: Theme.of(context).colorScheme.secondary,
@@ -362,7 +375,7 @@ class _SettingsPreview extends StatelessWidget {
         final list = (section.settings['fineTypes'] as List?) ?? const [];
         final count = list.length;
         return Text(
-          'Fines: $count type${count == 1 ? '' : 's'} configured',
+          'Late: ${section.settings['lateFine'] ?? 0}  Absent: ${section.settings['absentFine'] ?? 0}  Missed: ${section.settings['missedSavingsFine'] ?? 0}  |  Types: $count',
           style: GoogleFonts.redHatDisplay(
             fontSize: 12,
             color: Theme.of(context).colorScheme.secondary,
@@ -396,6 +409,9 @@ class _SectionEditorState extends State<_SectionEditor> {
   bool _fixedAmount = false;
   double _fixedAmountValue = 0;
   double _penaltyPerMiss = 0;
+  // Meetings
+  String _meetingDay = 'monday';
+  int _meetingCount = 12;
 
   // Loans
   String _interestType = 'flat';
@@ -403,6 +419,7 @@ class _SectionEditorState extends State<_SectionEditor> {
   double _maxMultipleSavings = 3;
   double _penaltyRate = 0;
   int _maxDurationWeeks = 12;
+  int _minGuarantors = 1;
 
   // Social Fund
   double _socialContribution = 0;
@@ -410,6 +427,9 @@ class _SectionEditorState extends State<_SectionEditor> {
   String _usageNotes = 'Emergency assistance & welfare needs';
   // Fines
   final List<_FineTypeForm> _fineTypes = [];
+  double _lateFine = 0;
+  double _absentFine = 0;
+  double _missedSavingsFine = 0;
 
   @override
   void initState() {
@@ -428,12 +448,18 @@ class _SectionEditorState extends State<_SectionEditor> {
           _fixedAmountValue = (set['fixedAmountValue'] ?? 0).toDouble();
           _penaltyPerMiss = (set['penaltyPerMiss'] ?? 0).toDouble();
           break;
+        case SectionKind.meetings:
+          _savingsFrequency = set['frequency'] ?? _savingsFrequency;
+          _meetingDay = (set['meetingDay'] ?? _meetingDay).toString();
+          _meetingCount = (set['meetingCount'] ?? _meetingCount).toInt();
+          break;
         case SectionKind.loans:
           _interestType = set['interestType'] ?? _interestType;
           _interestRate = (set['interestRate'] ?? 0).toDouble();
           _maxMultipleSavings = (set['maxMultipleSavings'] ?? 3).toDouble();
           _penaltyRate = (set['penaltyRate'] ?? 0).toDouble();
           _maxDurationWeeks = (set['maxDurationWeeks'] ?? 12).toInt();
+          _minGuarantors = (set['minGuarantors'] ?? _minGuarantors).toInt();
           break;
         case SectionKind.socialFund:
           _socialContribution = (set['contributionAmount'] ?? 0).toDouble();
@@ -453,6 +479,11 @@ class _SectionEditorState extends State<_SectionEditor> {
                 );
               }),
             );
+          _lateFine = (set['lateFine'] as num?)?.toDouble() ?? _lateFine;
+          _absentFine = (set['absentFine'] as num?)?.toDouble() ?? _absentFine;
+          _missedSavingsFine =
+              (set['missedSavingsFine'] as num?)?.toDouble() ??
+              _missedSavingsFine;
           break;
         case SectionKind.generic:
           break;
@@ -492,7 +523,7 @@ class _SectionEditorState extends State<_SectionEditor> {
                 validator:
                     (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _body,
                 decoration: const InputDecoration(
@@ -604,6 +635,7 @@ class _SectionEditorState extends State<_SectionEditor> {
       value: _kind,
       items: const [
         DropdownMenuItem(value: SectionKind.generic, child: Text('Generic')),
+        DropdownMenuItem(value: SectionKind.meetings, child: Text('Meetings')),
         DropdownMenuItem(value: SectionKind.savings, child: Text('Savings')),
         DropdownMenuItem(value: SectionKind.loans, child: Text('Loans')),
         DropdownMenuItem(
@@ -621,6 +653,8 @@ class _SectionEditorState extends State<_SectionEditor> {
     switch (_kind) {
       case SectionKind.savings:
         return _savingsSettings();
+      case SectionKind.meetings:
+        return _meetingsSettings();
       case SectionKind.loans:
         return _loanSettings();
       case SectionKind.socialFund:
@@ -642,6 +676,12 @@ class _SectionEditorState extends State<_SectionEditor> {
           'fixedAmountValue': _fixedAmountValue,
           'penaltyPerMiss': _penaltyPerMiss,
         };
+      case SectionKind.meetings:
+        return {
+          'frequency': _savingsFrequency,
+          'meetingDay': _meetingDay,
+          'meetingCount': _meetingCount,
+        };
       case SectionKind.loans:
         return {
           'interestType': _interestType,
@@ -649,6 +689,7 @@ class _SectionEditorState extends State<_SectionEditor> {
           'maxMultipleSavings': _maxMultipleSavings,
           'penaltyRate': _penaltyRate,
           'maxDurationWeeks': _maxDurationWeeks,
+          'minGuarantors': _minGuarantors,
         };
       case SectionKind.socialFund:
         return {
@@ -658,6 +699,9 @@ class _SectionEditorState extends State<_SectionEditor> {
         };
       case SectionKind.fines:
         return {
+          'lateFine': _lateFine,
+          'absentFine': _absentFine,
+          'missedSavingsFine': _missedSavingsFine,
           'fineTypes':
               _fineTypes
                   .map((e) => {'name': e.name, 'amount': e.amount})
@@ -710,24 +754,28 @@ class _SectionEditorState extends State<_SectionEditor> {
           ],
           onChanged: (v) => setState(() => _savingsFrequency = v ?? 'weekly'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         _numberField(
           label: 'Minimum Contribution',
           value: _minContribution,
           onChanged: (v) => setState(() => _minContribution = v),
         ),
+        const SizedBox(height: 12),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Fixed Amount Savings'),
           value: _fixedAmount,
           onChanged: (v) => setState(() => _fixedAmount = v),
         ),
-        if (_fixedAmount)
+        if (_fixedAmount) ...[
+          const SizedBox(height: 12),
           _numberField(
             label: 'Fixed Amount Value',
             value: _fixedAmountValue,
             onChanged: (v) => setState(() => _fixedAmountValue = v),
           ),
+        ],
+        const SizedBox(height: 12),
         _numberField(
           label: 'Penalty Per Miss',
           value: _penaltyPerMiss,
@@ -737,10 +785,55 @@ class _SectionEditorState extends State<_SectionEditor> {
     );
   }
 
+  Widget _meetingsSettings() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String>(
+          value: _savingsFrequency,
+          decoration: const InputDecoration(labelText: 'Meeting Frequency'),
+          items: const [
+            DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+            DropdownMenuItem(value: 'biweekly', child: Text('Bi-weekly')),
+            DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+          ],
+          onChanged: (v) => setState(() => _savingsFrequency = v ?? 'weekly'),
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          value: _meetingDay,
+          decoration: const InputDecoration(labelText: 'Meeting Day'),
+          items: const [
+            DropdownMenuItem(value: 'monday', child: Text('Monday')),
+            DropdownMenuItem(value: 'tuesday', child: Text('Tuesday')),
+            DropdownMenuItem(value: 'wednesday', child: Text('Wednesday')),
+            DropdownMenuItem(value: 'thursday', child: Text('Thursday')),
+            DropdownMenuItem(value: 'friday', child: Text('Friday')),
+            DropdownMenuItem(value: 'saturday', child: Text('Saturday')),
+            DropdownMenuItem(value: 'sunday', child: Text('Sunday')),
+          ],
+          onChanged: (v) => setState(() => _meetingDay = v ?? 'monday'),
+        ),
+        const SizedBox(height: 16),
+        _intField(
+          label: 'Meetings in Cycle',
+          value: _meetingCount,
+          onChanged: (v) => setState(() => _meetingCount = v),
+        ),
+      ],
+    );
+  }
+
   Widget _loanSettings() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _intField(
+          label: 'Minimum Guarantors',
+          value: _minGuarantors,
+          onChanged: (v) => setState(() => _minGuarantors = v <= 0 ? 1 : v),
+        ),
+        const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           value: _interestType,
           decoration: const InputDecoration(labelText: 'Interest Type'),
@@ -753,22 +846,25 @@ class _SectionEditorState extends State<_SectionEditor> {
           ],
           onChanged: (v) => setState(() => _interestType = v ?? 'flat'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         _numberField(
           label: 'Interest Rate (%)',
           value: _interestRate,
           onChanged: (v) => setState(() => _interestRate = v),
         ),
+        const SizedBox(height: 12),
         _numberField(
           label: 'Max Multiple of Savings',
           value: _maxMultipleSavings,
           onChanged: (v) => setState(() => _maxMultipleSavings = v),
         ),
+        const SizedBox(height: 12),
         _numberField(
           label: 'Penalty Rate (%)',
           value: _penaltyRate,
           onChanged: (v) => setState(() => _penaltyRate = v),
         ),
+        const SizedBox(height: 12),
         _intField(
           label: 'Max Duration (weeks)',
           value: _maxDurationWeeks,
@@ -787,11 +883,13 @@ class _SectionEditorState extends State<_SectionEditor> {
           value: _socialContribution,
           onChanged: (v) => setState(() => _socialContribution = v),
         ),
+        const SizedBox(height: 12),
         TextFormField(
           initialValue: _approvalRule,
           decoration: const InputDecoration(labelText: 'Approval Rule'),
           onChanged: (v) => _approvalRule = v,
         ),
+        const SizedBox(height: 12),
         TextFormField(
           initialValue: _usageNotes,
           decoration: const InputDecoration(labelText: 'Usage Notes'),
@@ -806,6 +904,24 @@ class _SectionEditorState extends State<_SectionEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _numberField(
+          label: 'Late Fine',
+          value: _lateFine,
+          onChanged: (v) => setState(() => _lateFine = v),
+        ),
+        const SizedBox(height: 12),
+        _numberField(
+          label: 'Absent Fine',
+          value: _absentFine,
+          onChanged: (v) => setState(() => _absentFine = v),
+        ),
+        const SizedBox(height: 12),
+        _numberField(
+          label: 'Missed Savings Fine',
+          value: _missedSavingsFine,
+          onChanged: (v) => setState(() => _missedSavingsFine = v),
+        ),
+        const SizedBox(height: 8),
         ..._fineTypes.asMap().entries.map(
           (entry) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -843,6 +959,7 @@ class _SectionEditorState extends State<_SectionEditor> {
             ),
           ),
         ),
+        const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerLeft,
           child: FilledButton.icon(
