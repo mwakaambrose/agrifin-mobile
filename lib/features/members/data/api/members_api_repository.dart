@@ -104,21 +104,51 @@ class MembersApiRepository {
     String? phone,
     String? email,
     String? nationalId,
+    String? address,
+    String? region,
+    String? district,
+    String? gender,
+    String? maritalStatus,
+    bool? hasDisability,
+    String? idType,
+    String? idNumber,
+    String? photoPath, // local file path for profile picture
     required String pin,
     required String joinedAt, // Added joinedAt parameter
   }) async {
     try {
-      await _dio.post(
-        '/api/v1/groups/$groupId/members',
-        data: {
-          'name': name,
-          'phone': phone,
-          'email': email,
-          'national_id': nationalId,
-          'pin': pin,
-          'joined_at': joinedAt, // Include joinedAt in the request body
-        },
-      );
+      final Map<String, dynamic> payload = {
+        'name': name,
+        'phone': phone,
+        'email': email,
+        'address': address,
+        'region': region,
+        'district': district,
+        // keep legacy national_id while also sending id_type/number
+        if ((nationalId ?? idNumber) != null &&
+            (idType == null || idType == 'national_id'))
+          'national_id': nationalId ?? idNumber,
+        'gender': gender,
+        'marital_status': maritalStatus,
+        'has_disability': hasDisability,
+        'id_type': idType,
+        'id_number': idNumber ?? nationalId,
+        'pin': pin,
+        'joined_at': joinedAt,
+      };
+
+      if (photoPath != null && photoPath.isNotEmpty) {
+        final form = FormData.fromMap({
+          ...payload,
+          'photo': await MultipartFile.fromFile(
+            photoPath,
+            filename: photoPath.split('/').last,
+          ),
+        });
+        await _dio.post('/api/v1/groups/$groupId/members', data: form);
+      } else {
+        await _dio.post('/api/v1/groups/$groupId/members', data: payload);
+      }
     } on DioException catch (e) {
       if (e.response?.statusCode == 422) {
         final errorData = e.response?.data;
@@ -170,9 +200,34 @@ class MembersApiRepository {
     required int group_id,
     required int memberId,
     required Map<String, dynamic> data,
+    String? photoPath, // optional local file path for profile picture
   }) async {
     try {
-      await _dio.put('/api/v1/groups/$group_id/members/$memberId', data: data);
+      final Map<String, dynamic> payload = {
+        ...data,
+        // ensure legacy mapping if applicable
+        if (data['id_type'] == 'national_id' && data['id_number'] != null)
+          'national_id': data['id_number'],
+      };
+
+      if (photoPath != null && photoPath.isNotEmpty) {
+        final form = FormData.fromMap({
+          ...payload,
+          'photo': await MultipartFile.fromFile(
+            photoPath,
+            filename: photoPath.split('/').last,
+          ),
+        });
+        await _dio.put(
+          '/api/v1/groups/$group_id/members/$memberId',
+          data: form,
+        );
+      } else {
+        await _dio.put(
+          '/api/v1/groups/$group_id/members/$memberId',
+          data: payload,
+        );
+      }
     } on DioException catch (e) {
       if (e.response?.statusCode == 422) {
         final errorData = e.response?.data;
