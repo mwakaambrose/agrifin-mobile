@@ -194,7 +194,17 @@ class _EditMemberScreenState extends State<EditMemberScreen> {
           joinedAt: DateTime.now().toIso8601String(),
         );
       }
-
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEditMode
+                ? 'Member updated successfully'
+                : 'Member created successfully',
+          ),
+        ),
+      );
+      await Future.delayed(const Duration(milliseconds: 600));
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

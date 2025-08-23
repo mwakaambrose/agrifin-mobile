@@ -89,6 +89,14 @@ class _MemberListScreenState extends State<MemberListScreen> {
             color: Theme.of(context).colorScheme.onPrimary,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            color: Theme.of(context).colorScheme.onPrimary,
+            onPressed: _fetchMembers,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body:
           _isLoading

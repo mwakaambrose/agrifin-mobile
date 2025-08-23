@@ -139,7 +139,12 @@ class _CreateMemberScreenState extends State<CreateMemberScreen> {
         joinedAt: DateTime.now().toIso8601String(),
       );
 
-      Navigator.pop(context);
+      // Success message then close
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Member added successfully')),
+      );
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(
         context,

@@ -293,14 +293,14 @@ class _LoginFormState extends State<_LoginForm> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.savings, color: Colors.white, size: 72),
+                      // Icon(Icons.savings, color: Colors.white, size: 72),
                       // const SizedBox(width: 8),
                       // Text(
-                      //   'Agrifinity',
+                      //   'Agrifin Savings Groups',
                       //   style: GoogleFonts.redHatDisplay(
                       //     color: Colors.white,
                       //     fontWeight: FontWeight.bold,
@@ -317,6 +317,7 @@ class _LoginFormState extends State<_LoginForm> {
                       fontSize: 30,
                       fontWeight: FontWeight.bold,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -326,7 +327,7 @@ class _LoginFormState extends State<_LoginForm> {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 10),
                   Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),

@@ -331,68 +331,80 @@ class _MeetingsBodyState extends State<_MeetingsBody> {
                                     );
                                   }
                                 },
-                                trailing: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    textStyle: GoogleFonts.redHatDisplay(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  onPressed: () async {
-                                    if (m.active == false) {
-                                      final confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder:
-                                            (context) => ConfirmDialog(
-                                              title: 'Start Meeting',
-                                              message:
-                                                  'Are you sure you want to start this meeting?',
-                                              onConfirm: (val) {},
+                                trailing:
+                                    (m.status == "completed")
+                                        ? null
+                                        : ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
-                                      );
-                                      if (confirm == true) {
-                                        await vm.startMeeting(m.id);
-                                        // ignore: use_build_context_synchronously
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (_) => MeetingGuidePage(
-                                                  meetingId: m.id,
+                                            textStyle:
+                                                GoogleFonts.redHatDisplay(
+                                                  fontWeight: FontWeight.bold,
                                                 ),
                                           ),
-                                        );
-                                      }
-                                    } else {
-                                      final summary = await showDialog<String>(
-                                        context: context,
-                                        builder:
-                                            (context) => MeetingSummaryDialog(
-                                              onSave: (val) {},
-                                            ),
-                                      );
-                                      if (summary != null &&
-                                          summary.trim().isNotEmpty) {
-                                        await vm.endMeeting(
-                                          m.id,
-                                          notes: summary.trim(),
-                                        );
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Meeting ended'),
+                                          onPressed: () async {
+                                            if (m.active == false) {
+                                              final confirm = await showDialog<
+                                                bool
+                                              >(
+                                                context: context,
+                                                builder:
+                                                    (context) => ConfirmDialog(
+                                                      title: 'Start Meeting',
+                                                      message:
+                                                          'Are you sure you want to start this meeting?',
+                                                      onConfirm: (val) {},
+                                                    ),
+                                              );
+                                              if (confirm == true) {
+                                                await vm.startMeeting(m.id);
+                                                // ignore: use_build_context_synchronously
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder:
+                                                        (_) => MeetingGuidePage(
+                                                          meetingId: m.id,
+                                                        ),
+                                                  ),
+                                                );
+                                              }
+                                            } else {
+                                              final summary = await showDialog<
+                                                String
+                                              >(
+                                                context: context,
+                                                builder:
+                                                    (context) =>
+                                                        MeetingSummaryDialog(
+                                                          onSave: (val) {},
+                                                        ),
+                                              );
+                                              if (summary != null &&
+                                                  summary.trim().isNotEmpty) {
+                                                await vm.endMeeting(
+                                                  m.id,
+                                                  notes: summary.trim(),
+                                                );
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Meeting ended',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
+                                          child: Text(
+                                            m.active == true ? 'End' : 'Start',
                                           ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  child: Text(
-                                    m.active == true ? 'End' : 'Start',
-                                  ),
-                                ),
+                                        ),
                               ),
                             ),
                           );
