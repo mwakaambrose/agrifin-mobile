@@ -11,8 +11,8 @@ class MembersRepository {
     : _api = api ?? MembersApiRepository();
   final MembersApiRepository _api;
 
-  Future<List<MemberLite>> listByCycle(int cycleId) async {
-    final data = await _api.listCycleMembers(cycleId);
+  Future<List<MemberLite>> listByCycle(int groupId) async {
+    final data = await _api.listCycleMembers(groupId);
     return data
         .map(
           (m) => MemberLite(

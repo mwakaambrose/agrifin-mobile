@@ -28,9 +28,9 @@ class SavingDto {
   factory SavingDto.fromJson(Map<String, dynamic> json) => SavingDto(
     id: json['id'] as int,
     amount: (json['amount'] as num).toInt(),
-    meetingId: json['meeting_id'] as int,
-    cycleId: json['cycle_id'] as int,
-    group_id: json['group_id'] as int,
+    meetingId: json['meeting_id'] as int? ?? 0,
+    cycleId: json['cycle_id'] as int? ?? 0,
+    group_id: json['group_id'] as int? ?? 0,
     member: json['member'] as Map<String, dynamic>?,
     transaction: json['transaction'] as Map<String, dynamic>?,
     notes: json['notes'] as String?,

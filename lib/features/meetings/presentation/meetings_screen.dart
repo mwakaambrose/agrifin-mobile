@@ -28,14 +28,22 @@ class _MeetingsBody extends StatefulWidget {
 }
 
 class _MeetingsBodyState extends State<_MeetingsBody> {
+  int? _previousCycleId;
+
   @override
-  void initState() {
-    super.initState();
-    final appCtx = context.read<CurrentContext>();
-    final cycleId = appCtx.cycleId ?? 1;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MeetingsViewModel>().load(cycleId);
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appCtx = context.watch<CurrentContext>();
+    final cycleId = appCtx.cycleId;
+    if (cycleId != null && cycleId != _previousCycleId) {
+      _previousCycleId = cycleId;
+      // Use a post frame callback to avoid calling setState during a build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<MeetingsViewModel>().load(cycleId);
+        }
+      });
+    }
   }
 
   @override

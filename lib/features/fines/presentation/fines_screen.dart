@@ -19,20 +19,46 @@ class FinesScreen extends StatelessWidget {
   }
 }
 
-class _FinesBody extends StatelessWidget {
+class _FinesBody extends StatefulWidget {
   const _FinesBody();
+
+  @override
+  State<_FinesBody> createState() => _FinesBodyState();
+}
+
+class _FinesBodyState extends State<_FinesBody> {
+  int? _previousCycleId;
+  int? _previousMeetingId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appCtx = context.watch<CurrentContext>();
+    final cycleId = appCtx.cycleId;
+    final meetingId = appCtx.activeMeetingId;
+
+    if (cycleId != null &&
+        meetingId != null &&
+        (cycleId != _previousCycleId || meetingId != _previousMeetingId)) {
+      _previousCycleId = cycleId;
+      _previousMeetingId = meetingId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<FinesViewModel>().ensureLoaded(cycleId, meetingId);
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<FinesViewModel>();
     final appCtx = context.watch<CurrentContext>();
-    final cycleId = appCtx.cycleId ?? 1;
-    final meetingId = appCtx.activeMeetingId ?? 1;
-    // Only load once; don't keep reloading repeatedly.
-    if (!vm.busy && !vm.initialized) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<FinesViewModel>().ensureLoaded(cycleId, meetingId);
-      });
-    }
+    final cycleId = appCtx.cycleId;
+    final meetingId = appCtx.activeMeetingId;
+
+    final canLoad = cycleId != null && meetingId != null;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -61,15 +87,49 @@ class _FinesBody extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             color: Theme.of(context).colorScheme.onPrimary,
-            onPressed: () => vm.load(cycleId, meetingId),
+            onPressed:
+                canLoad
+                    ? () =>
+                        context.read<FinesViewModel>().load(cycleId, meetingId)
+                    : null,
           ),
         ],
       ),
       body:
-          vm.busy
+          !canLoad
+              ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 48,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No active cycle or meeting. Please start a meeting to manage fines.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.redHatDisplay(fontSize: 16),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => context.go('/home'),
+                        icon: const Icon(Icons.home),
+                        label: const Text('Go to Home'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              : vm.busy
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
-                onRefresh: () => vm.load(cycleId, meetingId),
+                onRefresh:
+                    () =>
+                        context.read<FinesViewModel>().load(cycleId, meetingId),
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -97,7 +157,11 @@ class _FinesBody extends StatelessWidget {
                             ),
                           ),
                           trailing: TextButton.icon(
-                            onPressed: () => vm.load(cycleId, meetingId),
+                            onPressed:
+                                () => context.read<FinesViewModel>().load(
+                                  cycleId,
+                                  meetingId,
+                                ),
                             icon: const Icon(Icons.refresh),
                             label: const Text('Reload'),
                           ),
@@ -215,183 +279,210 @@ class _FinesBody extends StatelessWidget {
           'Assign Fine',
           style: GoogleFonts.redHatDisplay(fontWeight: FontWeight.bold),
         ),
-        onPressed: () async {
-          if (vm.types.isEmpty) return; // nothing to assign yet
-          int? selectedMemberId;
-          FineType? selectedType;
-          DateTime selectedDate = DateTime.now();
-          bool saving = false;
-          String? saveError;
-          await showDialog(
-            context: context,
-            builder: (context) {
-              return StatefulBuilder(
-                builder: (context, setState) {
-                  return AlertDialog(
-                    title: Text(
-                      'Assign Fine',
-                      style: GoogleFonts.redHatDisplay(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    content: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          MemberPicker(
-                            onSelected: (id, name) {
-                              setState(() {
-                                selectedMemberId = id;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<FineType>(
-                            decoration: InputDecoration(
-                              labelText: 'Fine Type',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+        onPressed:
+            canLoad
+                ? () async {
+                  if (vm.types.isEmpty) return; // nothing to assign yet
+                  int? selectedMemberId;
+                  FineType? selectedType;
+                  DateTime selectedDate = DateTime.now();
+                  bool saving = false;
+                  String? saveError;
+                  await showDialog(
+                    context: context,
+                    builder: (dialogContext) {
+                      return ChangeNotifierProvider.value(
+                        value: vm,
+                        child: StatefulBuilder(
+                          builder: (context, setState) {
+                            return AlertDialog(
+                              title: Text(
+                                'Assign Fine',
+                                style: GoogleFonts.redHatDisplay(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            items:
-                                vm.types
-                                    .map(
-                                      (t) => DropdownMenuItem(
-                                        value: t,
-                                        child: Text(
-                                          '${t.name} • ${t.amount} UGX',
+                              content: SingleChildScrollView(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    MemberPicker(
+                                      onSelected: (id, name) {
+                                        setState(() {
+                                          selectedMemberId = id;
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    DropdownButtonFormField<FineType>(
+                                      isExpanded: true,
+                                      decoration: InputDecoration(
+                                        labelText: 'Fine Type',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                       ),
-                                    )
-                                    .toList(),
-                            value: selectedType,
-                            onChanged: (val) {
-                              setState(() {
-                                selectedType = val;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              'Date: ${selectedDate.toLocal().toString().split(' ')[0]}',
-                            ),
-                            trailing: const Icon(Icons.calendar_today),
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: selectedDate,
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime(2100),
-                              );
-                              if (picked != null)
-                                setState(() {
-                                  selectedDate = picked;
-                                });
-                            },
-                          ),
-                          if (saveError != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              saveError ?? '',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: saving ? null : () => Navigator.pop(context),
-                        child: Text(
-                          'Cancel',
-                          style: GoogleFonts.redHatDisplay(),
-                        ),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          foregroundColor:
-                              Theme.of(context).colorScheme.onPrimary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          textStyle: GoogleFonts.redHatDisplay(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        onPressed:
-                            saving
-                                ? null
-                                : () async {
-                                  if (selectedMemberId == null ||
-                                      selectedType == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Select member & fine type.',
+                                      items:
+                                          vm.types
+                                              .map(
+                                                (t) => DropdownMenuItem(
+                                                  value: t,
+                                                  child: Text(
+                                                    '${t.name} • ${t.amount} UGX',
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
+                                      value: selectedType,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          selectedType = val;
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text(
+                                        'Date: ${selectedDate.toLocal().toString().split(' ')[0]}',
+                                      ),
+                                      trailing: const Icon(
+                                        Icons.calendar_today,
+                                      ),
+                                      onTap: () async {
+                                        final picked = await showDatePicker(
+                                          context: context,
+                                          initialDate: selectedDate,
+                                          firstDate: DateTime(2020),
+                                          lastDate: DateTime(2100),
+                                        );
+                                        if (picked != null) {
+                                          setState(() {
+                                            selectedDate = picked;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                    if (saveError != null) ...[
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        saveError ?? '',
+                                        style: TextStyle(
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.error,
                                         ),
                                       ),
-                                    );
-                                    return;
-                                  }
-                                  setState(() {
-                                    saving = true;
-                                    saveError = null;
-                                  });
-                                  try {
-                                    await vm.assignAndRefresh(
-                                      cycleId: cycleId,
-                                      meetingId: meetingId,
-                                      memberId: selectedMemberId!,
-                                      type: selectedType!,
-                                      amount:
-                                          selectedType!.adjustable
-                                              ? selectedType!.amount
-                                              : null,
-                                    );
-                                    if (context.mounted) {
-                                      Navigator.pop(context);
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Fine assigned.'),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    setState(() => saveError = e.toString());
-                                  } finally {
-                                    if (context.mounted) {
-                                      setState(() {
-                                        saving = false;
-                                      });
-                                    }
-                                  }
-                                },
-                        child:
-                            saving
-                                ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed:
+                                      saving
+                                          ? null
+                                          : () => Navigator.pop(context),
+                                  child: Text(
+                                    'Cancel',
+                                    style: GoogleFonts.redHatDisplay(),
                                   ),
-                                )
-                                : const Text('Assign'),
-                      ),
-                    ],
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    textStyle: GoogleFonts.redHatDisplay(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  onPressed:
+                                      saving
+                                          ? null
+                                          : () async {
+                                            if (selectedMemberId == null ||
+                                                selectedType == null) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Select member & fine type.',
+                                                  ),
+                                                ),
+                                              );
+                                              return;
+                                            }
+                                            setState(() {
+                                              saving = true;
+                                              saveError = null;
+                                            });
+                                            try {
+                                              await context
+                                                  .read<FinesViewModel>()
+                                                  .assignAndRefresh(
+                                                    cycleId: cycleId,
+                                                    meetingId: meetingId,
+                                                    memberId: selectedMemberId!,
+                                                    type: selectedType!,
+                                                    amount:
+                                                        selectedType!.adjustable
+                                                            ? selectedType!
+                                                                .amount
+                                                            : null,
+                                                  );
+                                              if (context.mounted) {
+                                                Navigator.pop(context);
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Fine assigned.',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            } catch (e) {
+                                              setState(
+                                                () => saveError = e.toString(),
+                                              );
+                                            } finally {
+                                              if (context.mounted) {
+                                                setState(() {
+                                                  saving = false;
+                                                });
+                                              }
+                                            }
+                                          },
+                                  child:
+                                      saving
+                                          ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                          : const Text('Assign'),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      );
+                    },
                   );
-                },
-              );
-            },
-          );
-        },
+                }
+                : null,
       ),
     );
   }

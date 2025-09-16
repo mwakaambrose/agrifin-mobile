@@ -1,4 +1,6 @@
 import 'dart:io';
+
+import 'package:agrifinity/core/data/regions_and_districts.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -18,8 +20,9 @@ class _CreateMemberScreenState extends State<CreateMemberScreen> {
   final _phoneController = TextEditingController();
   final _idNumberController = TextEditingController();
   final _addressController = TextEditingController();
-  final _regionController = TextEditingController();
-  final _districtController = TextEditingController();
+  String? _selectedRegion;
+  String? _selectedDistrict;
+  List<String> _districts = [];
   String? _gender; // male | female | other
   String? _maritalStatus; // single | married | divorced | widowed
   bool _hasDisability = false;
@@ -50,8 +53,6 @@ class _CreateMemberScreenState extends State<CreateMemberScreen> {
     _phoneController.dispose();
     _idNumberController.dispose();
     _addressController.dispose();
-    _regionController.dispose();
-    _districtController.dispose();
     // _pinController.dispose(); // Dispose PIN controller
     super.dispose();
   }
@@ -118,12 +119,8 @@ class _CreateMemberScreenState extends State<CreateMemberScreen> {
         phone: phoneToSend,
         address:
             _addressController.text.isNotEmpty ? _addressController.text : null,
-        region:
-            _regionController.text.isNotEmpty ? _regionController.text : null,
-        district:
-            _districtController.text.isNotEmpty
-                ? _districtController.text
-                : null,
+        region: _selectedRegion,
+        district: _selectedDistrict,
         nationalId: _idType == 'national_id' ? _idNumberController.text : null,
         gender: _gender,
         maritalStatus: _maritalStatus,
@@ -237,7 +234,6 @@ class _CreateMemberScreenState extends State<CreateMemberScreen> {
                 IntlPhoneField(
                   controller: _phoneController,
                   initialCountryCode: 'UG',
-                  disableLengthCheck: true,
                   decoration: InputDecoration(
                     labelText: 'Phone',
                     labelStyle: GoogleFonts.redHatDisplay(
@@ -246,10 +242,6 @@ class _CreateMemberScreenState extends State<CreateMemberScreen> {
                     hintText: 'Enter phone number',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 14,
                     ),
                   ),
                   onChanged: (phone) {
@@ -271,7 +263,7 @@ class _CreateMemberScreenState extends State<CreateMemberScreen> {
                   items: const [
                     DropdownMenuItem(value: 'male', child: Text('Male')),
                     DropdownMenuItem(value: 'female', child: Text('Female')),
-                    DropdownMenuItem(value: 'other', child: Text('Other')),
+                    // DropdownMenuItem(value: 'other', child: Text('Other')),
                   ],
                   onChanged: (v) => setState(() => _gender = v),
                 ),
@@ -390,32 +382,60 @@ class _CreateMemberScreenState extends State<CreateMemberScreen> {
                 //               : null,
                 // ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _regionController,
+                DropdownButtonFormField<String>(
+                  value: _selectedRegion,
                   decoration: InputDecoration(
                     labelText: 'Region',
                     labelStyle: GoogleFonts.redHatDisplay(
                       fontWeight: FontWeight.w600,
                     ),
-                    hintText: 'Enter region',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
                     ),
                   ),
+                  items:
+                      regions.map((String region) {
+                        return DropdownMenuItem<String>(
+                          value: region,
+                          child: Text(region),
+                        );
+                      }).toList(),
+                  onChanged: (newValue) {
+                    setState(() {
+                      _selectedRegion = newValue;
+                      _districts = districtsByRegion[newValue!] ?? [];
+                      _selectedDistrict = null; // Reset district selection
+                    });
+                  },
+                  validator:
+                      (value) => value == null ? 'Region is required' : null,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _districtController,
+                DropdownButtonFormField<String>(
+                  value: _selectedDistrict,
                   decoration: InputDecoration(
                     labelText: 'District',
                     labelStyle: GoogleFonts.redHatDisplay(
                       fontWeight: FontWeight.w600,
                     ),
-                    hintText: 'Enter district',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
                     ),
                   ),
+                  items:
+                      _districts.map((String district) {
+                        return DropdownMenuItem<String>(
+                          value: district,
+                          child: Text(district),
+                        );
+                      }).toList(),
+                  onChanged: (newValue) {
+                    setState(() {
+                      _selectedDistrict = newValue;
+                    });
+                  },
+                  validator:
+                      (value) => value == null ? 'District is required' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(

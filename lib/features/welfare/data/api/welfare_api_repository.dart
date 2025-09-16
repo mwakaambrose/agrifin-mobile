@@ -25,10 +25,10 @@ class WelfareContributionDto {
 
   factory WelfareContributionDto.fromJson(Map<String, dynamic> json) =>
       WelfareContributionDto(
-        id: (json['id'] as num).toInt(),
-        meetingId: (json['meeting_id'] as num).toInt(),
+        id: (json['id'] as num? ?? 0).toInt(),
+        meetingId: (json['meeting_id'] as num? ?? 0).toInt(),
         member: json['member'] as Map<String, dynamic>?,
-        amount: (json['amount'] as num).toDouble(),
+        amount: (json['amount'] as num? ?? 0.0).toDouble(),
         notes: json['notes'] as String?,
         transaction: json['transaction'] as Map<String, dynamic>?,
         createdAt: DateTime.parse(json['created_at'] as String),
@@ -56,8 +56,9 @@ class WelfareListResponse {
 
   factory WelfareListResponse.fromJson(Map<String, dynamic> json) =>
       WelfareListResponse(
-        totalContributions: (json['total_contributions'] as num).toDouble(),
-        cycleId: (json['cycle_id'] as num).toInt(),
+        totalContributions:
+            (json['total_contributions'] as num? ?? 0.0).toDouble(),
+        cycleId: (json['cycle_id'] as num? ?? 0).toInt(),
         data:
             (json['data'] as List)
                 .cast<Map<String, dynamic>>()
@@ -105,7 +106,10 @@ class WelfareApiRepository {
             ),
         },
       );
-      return WelfareContributionDto.fromJson(res.data as Map<String, dynamic>);
+      print(res);
+      return WelfareContributionDto.fromJson(
+        res.data.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ApiException(
         'Failed to contribute to welfare',

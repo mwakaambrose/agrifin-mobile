@@ -11,6 +11,27 @@ class FineType {
     required this.amount,
     this.adjustable = false,
   });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is FineType &&
+        other.id == id &&
+        other.key == key &&
+        other.name == name &&
+        other.amount == amount &&
+        other.adjustable == adjustable;
+  }
+
+  @override
+  int get hashCode {
+    return id.hashCode ^
+        key.hashCode ^
+        name.hashCode ^
+        amount.hashCode ^
+        adjustable.hashCode;
+  }
 }
 
 class FineRecord {

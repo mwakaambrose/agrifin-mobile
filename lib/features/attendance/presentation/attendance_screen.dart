@@ -47,8 +47,8 @@ class _AttendanceBodyState extends State<_AttendanceBody> {
       _membersError = null;
     });
     try {
-      final cycleId = context.read<CurrentContext>().cycleId ?? 1;
-      final data = await _membersRepo.listByCycle(cycleId);
+      final groupId = context.read<CurrentContext>().group_id ?? 1;
+      final data = await _membersRepo.listByCycle(groupId);
       if (mounted) setState(() => _members = data);
     } catch (e) {
       if (mounted) setState(() => _membersError = e.toString());
@@ -84,6 +84,18 @@ class _AttendanceBodyState extends State<_AttendanceBody> {
             color: Theme.of(context).colorScheme.onPrimary,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.refresh,
+              color: Theme.of(context).colorScheme.onPrimary,
+            ),
+            onPressed: () async {
+              await vm.load(widget.meetingId);
+              await _loadMembers();
+            },
+          ),
+        ],
       ),
       body:
           vm.loading && _loadingMembers
@@ -133,13 +145,14 @@ class _AttendanceBodyState extends State<_AttendanceBody> {
                   itemBuilder: (context, i) {
                     final m = _members[i];
                     final rec = vm.records.firstWhere(
-                      (r) => r.cycleMemberId == m.id,
+                      (r) => r.memberId == m.id,
                       orElse:
                           () => AttendanceRecordDto(
                             id: -1,
                             meetingId: widget.meetingId,
                             cycleMemberId: m.id,
                             status: '-',
+                            memberId: m.id,
                           ),
                     );
                     return Card(
@@ -163,43 +176,67 @@ class _AttendanceBodyState extends State<_AttendanceBody> {
                           children: [
                             IconButton(
                               tooltip: 'Mark Present',
-                              icon: const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
+                              icon: Icon(
+                                rec.status == 'present'
+                                    ? Icons.check_circle
+                                    : Icons.check_circle_outline,
+                                color:
+                                    rec.status == 'present'
+                                        ? Colors.green
+                                        : Colors.grey,
                               ),
-                              onPressed: () async {
-                                await vm.mark(
-                                  meetingId: widget.meetingId,
-                                  memberId: m.id,
-                                  status: 'present',
-                                );
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Marked Present: ${m.name}'),
-                                  ),
-                                );
-                              },
+                              onPressed:
+                                  rec.status == 'present'
+                                      ? null
+                                      : () async {
+                                        await vm.mark(
+                                          meetingId: widget.meetingId,
+                                          memberId: m.id,
+                                          status: 'present',
+                                        );
+                                        if (!mounted) return;
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Marked Present: ${m.name}',
+                                            ),
+                                          ),
+                                        );
+                                      },
                             ),
                             IconButton(
                               tooltip: 'Mark Absent',
-                              icon: const Icon(
-                                Icons.cancel,
-                                color: Colors.redAccent,
+                              icon: Icon(
+                                rec.status == 'absent'
+                                    ? Icons.cancel
+                                    : Icons.cancel_outlined,
+                                color:
+                                    rec.status == 'absent'
+                                        ? Colors.redAccent
+                                        : Colors.grey,
                               ),
-                              onPressed: () async {
-                                await vm.mark(
-                                  meetingId: widget.meetingId,
-                                  memberId: m.id,
-                                  status: 'absent',
-                                );
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Marked Absent: ${m.name}'),
-                                  ),
-                                );
-                              },
+                              onPressed:
+                                  rec.status == 'absent'
+                                      ? null
+                                      : () async {
+                                        await vm.mark(
+                                          meetingId: widget.meetingId,
+                                          memberId: m.id,
+                                          status: 'absent',
+                                        );
+                                        if (!mounted) return;
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Marked Absent: ${m.name}',
+                                            ),
+                                          ),
+                                        );
+                                      },
                             ),
                           ],
                         ),

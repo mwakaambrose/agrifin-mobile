@@ -8,12 +8,16 @@ class TransactionsRepository {
 
   Future<List<TransactionRecord>> listAll({
     required int cycleId,
-    TransactionType? filter,
+    dynamic filter,
   }) async {
-    final res = await _api.list(
-      cycleId: cycleId,
-      type: filter == null ? null : _mapType(filter),
-    );
+    String? type;
+    if (filter is TransactionType) {
+      type = _mapType(filter);
+    } else if (filter is String) {
+      type = filter;
+    }
+
+    final res = await _api.list(cycleId: cycleId, type: type);
     return res.data
         .map(
           (t) => TransactionRecord(

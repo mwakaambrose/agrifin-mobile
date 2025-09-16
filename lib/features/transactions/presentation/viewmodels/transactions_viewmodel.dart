@@ -7,18 +7,24 @@ class TransactionsViewModel extends BaseViewModel {
   TransactionsViewModel(this._repo);
 
   List<TransactionRecord> transactions = [];
-  TransactionType? activeFilter;
+  dynamic activeFilter;
   int? _lastCycleId;
 
-  Future<void> load(int cycleId, {TransactionType? filter}) async {
+  Future<void> load(int cycleId, {dynamic filter}) async {
     if (busy) return;
     setBusy(true);
     setError(null);
     try {
       _lastCycleId = cycleId;
       activeFilter = filter;
-      transactions = await _repo.listAll(cycleId: cycleId, filter: filter);
-      
+      if (filter is TransactionType && filter == TransactionType.fine) {
+        transactions = await _repo.listAll(
+          cycleId: cycleId,
+          filter: 'fine_payment',
+        );
+      } else {
+        transactions = await _repo.listAll(cycleId: cycleId, filter: filter);
+      }
     } catch (e) {
       setError(e.toString());
     } finally {

@@ -6,6 +6,7 @@ class AttendanceRecordDto {
   final int id;
   final int meetingId;
   final int cycleMemberId;
+  final int memberId;
   final String status; // present | late | absent
   final DateTime? arrivalTime;
   final String? reason;
@@ -13,6 +14,7 @@ class AttendanceRecordDto {
   AttendanceRecordDto({
     required this.id,
     required this.meetingId,
+    required this.memberId,
     required this.cycleMemberId,
     required this.status,
     this.arrivalTime,
@@ -24,6 +26,10 @@ class AttendanceRecordDto {
       id: json['id'] as int,
       meetingId: json['meeting_id'] as int,
       cycleMemberId: json['cycle_member_id'] as int,
+      memberId:
+          json['member'] != null
+              ? json['member']['member_id'] as int
+              : json['member']['member_id'] as int,
       status: json['status'] as String,
       arrivalTime:
           json['arrival_time'] != null
@@ -55,7 +61,7 @@ class AttendanceRepository {
     }
   }
 
-  Future<AttendanceRecordDto> upsert({
+  Future<void> upsert({
     required int meetingId,
     required int memberId,
     required String status,
@@ -63,7 +69,7 @@ class AttendanceRepository {
     String? reason,
   }) async {
     try {
-      final res = await _dio.post(
+      await _dio.post(
         '/api/v1/meetings/$meetingId/attendance/$memberId',
         data: {
           'status': status,
@@ -71,9 +77,6 @@ class AttendanceRepository {
             'arrival_time': arrivalTime.toUtc().toIso8601String(),
           if (reason != null) 'reason': reason,
         },
-      );
-      return AttendanceRecordDto.fromJson(
-        (res.data['attendance'] as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throw ApiException(

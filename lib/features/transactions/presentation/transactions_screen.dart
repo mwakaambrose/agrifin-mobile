@@ -23,8 +23,31 @@ class TransactionsScreen extends StatelessWidget {
   }
 }
 
-class _TransactionsBody extends StatelessWidget {
+class _TransactionsBody extends StatefulWidget {
   const _TransactionsBody();
+
+  @override
+  State<_TransactionsBody> createState() => _TransactionsBodyState();
+}
+
+class _TransactionsBodyState extends State<_TransactionsBody> {
+  int? _previousCycleId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appCtx = context.watch<CurrentContext>();
+    final cycleId = appCtx.cycleId;
+
+    if (cycleId != null && cycleId != _previousCycleId) {
+      _previousCycleId = cycleId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<TransactionsViewModel>().load(cycleId);
+        }
+      });
+    }
+  }
 
   String _label(TransactionType t) {
     switch (t) {
@@ -76,7 +99,10 @@ class _TransactionsBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = context.watch<TransactionsViewModel>();
     final ctx = context.watch<CurrentContext>();
-    final cycleId = ctx.cycleId ?? 1;
+    final cycleId = ctx.cycleId;
+
+    final canLoad = cycleId != null;
+
     // Show a one-shot error toast when error appears
     if (vm.error != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -92,12 +118,7 @@ class _TransactionsBody extends StatelessWidget {
         }
       });
     }
-    // if (!vm.busy && vm.transactions.isEmpty) {
-    //   // initial load
-    //   WidgetsBinding.instance.addPostFrameCallback((_) {
-    //     context.read<TransactionsViewModel>().load(cycleId);
-    //   });
-    // }
+
     final types = TransactionType.values;
     return Scaffold(
       appBar: AppBar(
@@ -150,7 +171,20 @@ class _TransactionsBody extends StatelessWidget {
                   selected: selected,
                   avatar: Icon(_icon(t), size: 18),
                   onSelected:
-                      (_) => vm.load(cycleId, filter: selected ? null : t),
+                      canLoad
+                          ? (_) {
+                            final isCurrentlySelected = vm.activeFilter == t;
+                            if (isCurrentlySelected) {
+                              vm.clearFilter();
+                            } else {
+                              dynamic filterValue = t;
+                              if (t == TransactionType.fine) {
+                                filterValue = 'fine_payment';
+                              }
+                              vm.load(cycleId, filter: filterValue);
+                            }
+                          }
+                          : null,
                   selectedColor: Theme.of(
                     context,
                   ).colorScheme.primary.withOpacity(0.25),
@@ -172,7 +206,35 @@ class _TransactionsBody extends StatelessWidget {
             ),
           Expanded(
             child:
-                vm.busy
+                !canLoad
+                    ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 48,
+                              color: Colors.grey.shade600,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No active cycle. Please start a meeting to view transactions.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.redHatDisplay(fontSize: 16),
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: () => context.go('/home'),
+                              icon: const Icon(Icons.home),
+                              label: const Text('Go to Home'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                    : vm.busy
                     ? const Center(child: CircularProgressIndicator())
                     : vm.transactions.isEmpty
                     ? RefreshIndicator(

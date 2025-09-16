@@ -39,15 +39,23 @@ class _LoansBody extends StatefulWidget {
 }
 
 class _LoansBodyState extends State<_LoansBody> {
+  int? _previousCycleId;
+
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final appCtx = context.read<CurrentContext>();
-      final cycleId = appCtx.cycleId ?? 1;
-      context.read<LoansViewModel>().load(cycleId);
-      context.read<MemberListViewModel>().load();
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appCtx = context.watch<CurrentContext>();
+    final cycleId = appCtx.cycleId;
+    if (cycleId != null && cycleId != _previousCycleId) {
+      _previousCycleId = cycleId;
+      // Use a post frame callback to avoid calling setState during a build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<LoansViewModel>().load(cycleId);
+          context.read<MemberListViewModel>().load();
+        }
+      });
+    }
   }
 
   @override
@@ -467,6 +475,7 @@ class _LoansBodyState extends State<_LoansBody> {
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
+                            isExpanded: true,
                             value: selectedPurpose,
                             decoration: InputDecoration(
                               labelText: 'Purpose',
@@ -516,13 +525,12 @@ class _LoansBodyState extends State<_LoansBody> {
                                       ),
                                     )
                                     .toList(),
-                            onChanged: null,
+                            onChanged:
+                                null, // This is read-only from constitution
                           ),
                           const SizedBox(height: 12),
-                          TextField(
-                            controller: TextEditingController(
-                              text: rateDisplay,
-                            ),
+                          TextFormField(
+                            initialValue: rateDisplay,
                             readOnly: true,
                             decoration: InputDecoration(
                               labelText:

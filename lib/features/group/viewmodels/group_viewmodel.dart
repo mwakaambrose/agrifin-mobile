@@ -61,10 +61,18 @@ class GroupViewModel extends ChangeNotifier {
   bool get isLoading => _loading;
   String? get error => _error;
 
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   Future<void> refresh() async {
     _loading = true;
     _error = null;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
 
     try {
       // Pull group id from Hive box
@@ -85,7 +93,7 @@ class GroupViewModel extends ChangeNotifier {
       _error = e.toString();
     } finally {
       _loading = false;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     }
   }
 

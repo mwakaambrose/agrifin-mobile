@@ -5,9 +5,7 @@ import '../data/auth_repository.dart';
 import 'auth_viewmodel.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../../../core/session/user_session.dart';
-import '../../cycle/data/api/cycle_api_repository.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});

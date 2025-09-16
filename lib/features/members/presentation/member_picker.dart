@@ -34,8 +34,8 @@ class _MemberPickerState extends State<MemberPicker> {
     });
     try {
       final ctx = context.read<CurrentContext>();
-      final cycleId = ctx.cycleId ?? 1;
-      final data = await _repo.listByCycle(cycleId);
+      final groupId = ctx.group_id ?? 1;
+      final data = await _repo.listByCycle(groupId);
       setState(() => _members = data);
     } catch (e) {
       setState(() => _error = e.toString());
