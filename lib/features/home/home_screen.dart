@@ -5,6 +5,7 @@ import 'package:agrifinity/features/meetings/data/meeting_status_service.dart';
 import 'package:agrifinity/features/meetings/presentation/active_meeting_banner.dart';
 import 'package:provider/provider.dart';
 import 'presentation/home_viewmodel.dart';
+import 'package:agrifinity/features/group/viewmodels/group_viewmodel.dart';
 import 'package:agrifinity/core/session/user_session.dart';
 import 'package:intl/intl.dart';
 
@@ -62,11 +63,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _vm,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _vm),
+        ChangeNotifierProvider(create: (_) => GroupViewModel()),
+      ],
       child: Builder(
         builder: (context) {
           final vm = context.watch<HomeViewModel>();
+          final groupVm = context.watch<GroupViewModel>();
           String greeting() {
             final hour = DateTime.now().hour;
             if (hour < 12) return 'Good morning';
@@ -75,10 +80,8 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           final userName = context.watch<UserSession>().name;
+          final groupName = groupVm.group.name;
           final List<(String title, IconData icon, String route)> items = [
-            // ('Savings', Icons.savings, '/savings'),
-            // ('Loans', Icons.account_balance, '/loans'),
-            // ('Fines', Icons.receipt_long, '/fines'),
             ('Meetings', Icons.groups, '/meetings'),
             ('Members', Icons.people, '/members'),
             ('Notifications', Icons.notifications, '/notifications'),
@@ -130,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Text(
                         '${greeting()},',
                         style: GoogleFonts.redHatDisplay(
-                          fontSize: 22,
+                          fontSize: 16,
                           fontWeight: FontWeight.w500,
                           color: Theme.of(context).colorScheme.primary,
                         ),
@@ -145,9 +148,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Text(
                         userName,
                         style: GoogleFonts.redHatDisplay(
-                          fontSize: 28,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.onBackground,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 20, bottom: 0),
+                      child: Text(
+                        'Group: $groupName',
+                        style: GoogleFonts.redHatDisplay(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),

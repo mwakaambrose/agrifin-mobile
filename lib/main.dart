@@ -141,7 +141,7 @@ class MyApp extends StatelessWidget {
           scrolledUnderElevation: 0,
           centerTitle: true,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 1,
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
           shape: RoundedRectangleBorder(
@@ -176,7 +176,7 @@ class MyApp extends StatelessWidget {
           scrolledUnderElevation: 0,
           centerTitle: true,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 1,
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
           shape: RoundedRectangleBorder(
