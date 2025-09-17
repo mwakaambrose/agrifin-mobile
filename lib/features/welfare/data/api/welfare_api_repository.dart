@@ -7,7 +7,7 @@ class WelfareContributionDto {
   final int meetingId;
   final Map<String, dynamic>? member;
   final double amount;
-  final String? notes;
+  final dynamic notes;
   final Map<String, dynamic>? transaction;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -29,9 +29,12 @@ class WelfareContributionDto {
         meetingId: (json['meeting_id'] as num? ?? 0).toInt(),
         member: json['member'] as Map<String, dynamic>?,
         amount: (json['amount'] as num? ?? 0.0).toDouble(),
-        notes: json['notes'] as String?,
+        notes: json['notes'],
         transaction: json['transaction'] as Map<String, dynamic>?,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        createdAt:
+            json['created_at'] != null
+                ? DateTime.parse(json['created_at'] as String)
+                : DateTime.now(),
         updatedAt:
             json['updated_at'] != null
                 ? DateTime.parse(json['updated_at'] as String)
@@ -106,9 +109,9 @@ class WelfareApiRepository {
             ),
         },
       );
-      print(res);
+      final data = res.data as Map<String, dynamic>;
       return WelfareContributionDto.fromJson(
-        res.data.data as Map<String, dynamic>,
+        data['data'] as Map<String, dynamic>,
       );
     } on DioException catch (e) {
       throw ApiException(

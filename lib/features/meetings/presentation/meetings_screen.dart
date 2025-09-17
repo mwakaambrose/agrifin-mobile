@@ -239,10 +239,18 @@ class _MeetingsBodyState extends State<_MeetingsBody> {
                                     );
                                     if (summary != null &&
                                         summary.trim().isNotEmpty) {
+                                      final cycleId =
+                                          context
+                                              .read<CurrentContext>()
+                                              .cycleId;
                                       await vm.endMeeting(
                                         active.id,
                                         notes: summary.trim(),
                                       );
+                                      if (cycleId != null) {
+                                        await vm.load(cycleId);
+                                      }
+                                      if (!context.mounted) return;
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
@@ -393,10 +401,18 @@ class _MeetingsBodyState extends State<_MeetingsBody> {
                                               );
                                               if (summary != null &&
                                                   summary.trim().isNotEmpty) {
+                                                final cycleId =
+                                                    context
+                                                        .read<CurrentContext>()
+                                                        .cycleId;
                                                 await vm.endMeeting(
                                                   m.id,
                                                   notes: summary.trim(),
                                                 );
+                                                if (cycleId != null) {
+                                                  await vm.load(cycleId);
+                                                }
+                                                if (!context.mounted) return;
                                                 ScaffoldMessenger.of(
                                                   context,
                                                 ).showSnackBar(

@@ -76,7 +76,7 @@ class SavingsRepository {
     final res = await _api.listAll(cycleId: cycleId);
     final summary = SavingsAccountSummary(
       balance: res.totalSavingsBalance.toInt(),
-      cycleId: res.cycleId ?? 0,
+      cycleId: res.cycleId != null ? int.parse(res.cycleId) : 0,
     );
     final txs =
         res.data.map((dto) {

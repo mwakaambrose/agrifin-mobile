@@ -20,20 +20,39 @@ class SavingsScreen extends StatelessWidget {
   }
 }
 
-class _SavingsBody extends StatelessWidget {
+class _SavingsBody extends StatefulWidget {
   const _SavingsBody();
+
+  @override
+  State<_SavingsBody> createState() => _SavingsBodyState();
+}
+
+class _SavingsBodyState extends State<_SavingsBody> {
+  int? _previousCycleId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appCtx = context.watch<CurrentContext>();
+    final cycleId = appCtx.cycleId;
+    if (cycleId != null && cycleId != _previousCycleId) {
+      _previousCycleId = cycleId;
+      // Use a post frame callback to avoid calling setState during a build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<SavingsViewModel>().loadAll(cycleId: cycleId);
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<SavingsViewModel>();
     final appCtx = context.watch<CurrentContext>();
-    final meetingId = appCtx.activeMeetingId ?? 1;
+    final meetingId = appCtx.activeMeetingId;
     final currency = NumberFormat('#,##0');
-    if (!vm.busy && vm.summary == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<SavingsViewModel>().loadForMeeting(meetingId);
-      });
-    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -121,9 +140,11 @@ class _SavingsBody extends StatelessWidget {
                         const SizedBox(width: 8),
                         FilterChip(
                           label: const Text('This meeting'),
-                          selected: vm.activeMeetingFilter == meetingId,
+                          selected:
+                              vm.activeMeetingFilter == meetingId &&
+                              meetingId != null,
                           onSelected:
-                              vm.busy
+                              vm.busy || meetingId == null
                                   ? null
                                   : (_) => vm.loadForMeeting(meetingId),
                           showCheckmark: false,
@@ -299,6 +320,18 @@ class _SavingsBody extends StatelessWidget {
                                                   );
                                                   return;
                                                 }
+                                                if (meetingId == null) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'No active meeting.',
+                                                      ),
+                                                    ),
+                                                  );
+                                                  return;
+                                                }
                                                 setLocalState(
                                                   () => submitting = true,
                                                 );
@@ -308,11 +341,23 @@ class _SavingsBody extends StatelessWidget {
                                                   meetingId: meetingId,
                                                 );
                                                 if (!context.mounted) return;
+                                                Navigator.pop(context);
                                                 setLocalState(
                                                   () => submitting = false,
                                                 );
                                                 if (ok) {
-                                                  Navigator.pop(context);
+                                                  if (vm.activeMeetingFilter !=
+                                                      null) {
+                                                    await vm.loadForMeeting(
+                                                      vm.activeMeetingFilter!,
+                                                    );
+                                                  } else if (appCtx.cycleId !=
+                                                      null) {
+                                                    await vm.loadAll(
+                                                      cycleId: appCtx.cycleId!,
+                                                    );
+                                                  }
+                                                  if (!context.mounted) return;
                                                   ScaffoldMessenger.of(
                                                     context,
                                                   ).showSnackBar(

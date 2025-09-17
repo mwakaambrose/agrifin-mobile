@@ -57,20 +57,12 @@ class SocialViewModel extends BaseViewModel {
     setBusy(true);
     setError(null);
     try {
-      final contribution = await _repo.addContribution(
+      await _repo.addContribution(
         meetingId: meetingId,
         memberId: memberId,
         amount: amount,
         date: date,
       );
-      contributions = [contribution, ...contributions];
-      if (balance != null) {
-        balance = SocialBalance(
-          cycleId: balance!.cycleId,
-          balance: balance!.balance + amount,
-        );
-      }
-      notifyListeners();
       return true;
     } catch (e) {
       setError('Failed to add contribution');

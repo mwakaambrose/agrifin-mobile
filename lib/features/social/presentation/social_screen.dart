@@ -19,20 +19,40 @@ class SocialScreen extends StatelessWidget {
   }
 }
 
-class _SocialBody extends StatelessWidget {
+class _SocialBody extends StatefulWidget {
   const _SocialBody();
+
+  @override
+  State<_SocialBody> createState() => _SocialBodyState();
+}
+
+class _SocialBodyState extends State<_SocialBody> {
+  int? _previousCycleId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appCtx = context.watch<CurrentContext>();
+    final cycleId = appCtx.cycleId;
+    if (cycleId != null && cycleId != _previousCycleId) {
+      _previousCycleId = cycleId;
+      // Use a post frame callback to avoid calling setState during a build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<SocialViewModel>().load(cycleId);
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<SocialViewModel>();
     final appCtx = context.watch<CurrentContext>();
-    final cycleId = appCtx.cycleId ?? 1;
-    final meetingId = appCtx.activeMeetingId ?? 1;
+    final cycleId = appCtx.cycleId;
+    final meetingId = appCtx.activeMeetingId;
     final currency = NumberFormat('#,##0');
-    if (!vm.busy && vm.balance == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<SocialViewModel>().load(cycleId);
-      });
-    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -62,7 +82,14 @@ class _SocialBody extends StatelessWidget {
             IconButton(
               tooltip: 'Clear filter',
               color: Theme.of(context).colorScheme.onPrimary,
-              onPressed: vm.busy ? null : () => vm.loadAll(cycleId),
+              onPressed:
+                  vm.busy
+                      ? null
+                      : () {
+                        if (cycleId != null) {
+                          vm.loadAll(cycleId);
+                        }
+                      },
               icon: const Icon(Icons.filter_alt_off),
             ),
           IconButton(
@@ -72,6 +99,7 @@ class _SocialBody extends StatelessWidget {
                 vm.busy
                     ? null
                     : () async {
+                      if (cycleId == null) return;
                       if (vm.activeMeetingFilter == null) {
                         await vm.loadAll(cycleId);
                       } else {
@@ -89,6 +117,7 @@ class _SocialBody extends StatelessWidget {
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
                 onRefresh: () {
+                  if (cycleId == null) return Future.value();
                   if (vm.activeMeetingFilter == null) {
                     return vm.loadAll(cycleId);
                   } else {
@@ -108,7 +137,9 @@ class _SocialBody extends StatelessWidget {
                           label: const Text('All meetings'),
                           selected: vm.activeMeetingFilter == null,
                           onSelected:
-                              vm.busy ? null : (_) => vm.loadAll(cycleId),
+                              vm.busy || cycleId == null
+                                  ? null
+                                  : (_) => vm.loadAll(cycleId),
                           showCheckmark: false,
                         ),
                         const SizedBox(width: 8),
@@ -116,7 +147,7 @@ class _SocialBody extends StatelessWidget {
                           label: const Text('This meeting'),
                           selected: vm.activeMeetingFilter == meetingId,
                           onSelected:
-                              vm.busy
+                              vm.busy || meetingId == null || cycleId == null
                                   ? null
                                   : (_) => vm.loadForMeeting(
                                     meetingId: meetingId,
@@ -321,6 +352,18 @@ class _SocialBody extends StatelessWidget {
                                             );
                                             return;
                                           }
+                                          if (meetingId == null) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'No active meeting.',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
                                           setState(() => submitting = true);
                                           final ok = await vm.addContribution(
                                             meetingId: meetingId,
@@ -329,9 +372,20 @@ class _SocialBody extends StatelessWidget {
                                             date: selectedDate,
                                           );
                                           if (!context.mounted) return;
+                                          Navigator.pop(context);
                                           setState(() => submitting = false);
                                           if (ok) {
-                                            Navigator.pop(context);
+                                            if (cycleId == null) return;
+                                            if (vm.activeMeetingFilter !=
+                                                null) {
+                                              vm.loadForMeeting(
+                                                meetingId:
+                                                    vm.activeMeetingFilter!,
+                                                cycleId: cycleId,
+                                              );
+                                            } else {
+                                              vm.loadAll(cycleId);
+                                            }
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(

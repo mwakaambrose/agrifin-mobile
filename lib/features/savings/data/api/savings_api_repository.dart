@@ -3,14 +3,14 @@ import '../../../../core/network/dio_client.dart';
 import '../../../../core/exceptions.dart';
 
 class SavingDto {
-  final int id;
-  final int amount;
-  final int meetingId;
-  final int cycleId;
-  final int group_id;
+  final dynamic id;
+  final dynamic amount;
+  final dynamic meetingId;
+  final dynamic cycleId;
+  final dynamic group_id;
   final Map<String, dynamic>? member;
   final Map<String, dynamic>? transaction;
-  final String? notes;
+  final dynamic notes;
   final DateTime createdAt;
 
   SavingDto({
@@ -26,23 +26,23 @@ class SavingDto {
   });
 
   factory SavingDto.fromJson(Map<String, dynamic> json) => SavingDto(
-    id: json['id'] as int,
-    amount: (json['amount'] as num).toInt(),
-    meetingId: json['meeting_id'] as int? ?? 0,
-    cycleId: json['cycle_id'] as int? ?? 0,
-    group_id: json['group_id'] as int? ?? 0,
+    id: (json['id'] as num? ?? 0).toInt(),
+    amount: (json['amount'] as num? ?? 0).toInt(),
+    meetingId: (json['meeting_id'] as num? ?? 0).toInt(),
+    cycleId: (json['cycle_id'] as num? ?? 0).toInt(),
+    group_id: (json['group_id'] as num? ?? 0).toInt(),
     member: json['member'] as Map<String, dynamic>?,
     transaction: json['transaction'] as Map<String, dynamic>?,
-    notes: json['notes'] as String?,
+    notes: json['notes'],
     createdAt: DateTime.parse(json['created_at'] as String),
   );
 }
 
 class SavingsListResponse {
   final double totalSavingsBalance;
-  final int group_id;
-  final int? cycleId;
-  final int? meetingId;
+  final dynamic group_id;
+  final dynamic cycleId;
+  final dynamic meetingId;
   final List<SavingDto> data;
   final Map<String, dynamic>? meta;
 
@@ -58,9 +58,9 @@ class SavingsListResponse {
   factory SavingsListResponse.fromJson(Map<String, dynamic> json) =>
       SavingsListResponse(
         totalSavingsBalance: (json['total_savings_balance'] as num).toDouble(),
-        group_id: json['group_id'] as int,
-        cycleId: json['cycle_id'] as int?,
-        meetingId: json['meeting_id'] as int?,
+        group_id: json['group_id'],
+        cycleId: json['cycle_id'],
+        meetingId: json['meeting_id'],
         data:
             (json['data'] as List)
                 .cast<Map<String, dynamic>>()
@@ -118,7 +118,8 @@ class SavingsApiRepository {
           if (notes != null) 'notes': notes,
         },
       );
-      return SavingDto.fromJson(res.data as Map<String, dynamic>);
+      final data = res.data as Map<String, dynamic>;
+      return SavingDto.fromJson(data['data'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiException(
         'Failed to record saving',

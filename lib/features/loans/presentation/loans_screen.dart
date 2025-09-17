@@ -400,6 +400,7 @@ class _LoansBodyState extends State<_LoansBody> {
               ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
+          final vm = context.read<LoansViewModel>();
           // Ensure constitution is loaded before showing dialog
           final constitutionVm = context.read<ConstitutionViewModel>();
           if (constitutionVm.isEmpty) {
@@ -609,9 +610,10 @@ class _LoansBodyState extends State<_LoansBody> {
                                     purpose: selectedPurpose!,
                                   );
                                   if (!context.mounted) return;
+                                  Navigator.pop(context);
                                   setLocalState(() => submitting = false);
                                   if (ok) {
-                                    Navigator.pop(context);
+                                    vm.load(cycleId);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(

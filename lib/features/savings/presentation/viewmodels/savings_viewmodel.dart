@@ -72,21 +72,6 @@ class SavingsViewModel extends BaseViewModel {
         amount: amount,
         note: note,
       );
-      final tx = SavingsTransaction(
-        id: DateTime.now().millisecondsSinceEpoch,
-        memberId: memberId,
-        date: DateTime.now(),
-        amount: amount,
-        note: note,
-      );
-      transactions = [tx, ...transactions];
-      if (summary != null) {
-        summary = SavingsAccountSummary(
-          balance: summary!.balance + amount,
-          cycleId: summary!.cycleId,
-        );
-      }
-      notifyListeners();
       return true;
     } catch (e) {
       setError('Failed to contribute');
