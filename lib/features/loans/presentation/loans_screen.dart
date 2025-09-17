@@ -400,6 +400,12 @@ class _LoansBodyState extends State<_LoansBody> {
               ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
+          // Ensure constitution is loaded before showing dialog
+          final constitutionVm = context.read<ConstitutionViewModel>();
+          if (constitutionVm.isEmpty) {
+            await constitutionVm.refresh();
+          }
+
           int? selectedMemberId;
           String? selectedMemberName;
           final amountController = TextEditingController();
@@ -416,7 +422,6 @@ class _LoansBodyState extends State<_LoansBody> {
           ];
           String? selectedPurpose;
           final termController = TextEditingController();
-          final constitutionVm = context.read<ConstitutionViewModel>();
           final loansSection = constitutionVm.sections.firstWhere(
             (s) => s.kind == SectionKind.loans,
             orElse:
@@ -438,6 +443,7 @@ class _LoansBodyState extends State<_LoansBody> {
                   ? InterestType.reducing
                   : InterestType.flat;
           final rateDisplay = settingsInterestRate.toString();
+          final rateController = TextEditingController(text: rateDisplay);
 
           await showDialog(
             context: context,
@@ -530,7 +536,7 @@ class _LoansBodyState extends State<_LoansBody> {
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
-                            initialValue: rateDisplay,
+                            controller: rateController,
                             readOnly: true,
                             decoration: InputDecoration(
                               labelText:
