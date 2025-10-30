@@ -31,6 +31,7 @@ class _LoginFormState extends State<_LoginForm> {
   final _phoneController = TextEditingController();
   final _pinController = TextEditingController();
   String _fullPhone = '';
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -40,18 +41,29 @@ class _LoginFormState extends State<_LoginForm> {
   }
 
   Future<void> _submit(AuthViewModel vm) async {
+    if (_isSubmitting) return; // Prevent duplicate submissions
     if (!_formKey.currentState!.validate()) return;
-    final ok = await vm.login(_fullPhone, _pinController.text);
-    if (!mounted) return;
-    if (ok) {
-      final user = vm.user; // Assuming vm.user contains the logged-in user data
-      final session = Provider.of<UserSession>(context, listen: false);
-      session.setUser(user);
-      context.go('/home');
-    } else if (vm.error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(vm.error!)));
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final ok = await vm.login(_fullPhone, _pinController.text);
+      if (!mounted) return;
+      if (ok) {
+        final user =
+            vm.user; // Assuming vm.user contains the logged-in user data
+        final session = Provider.of<UserSession>(context, listen: false);
+        session.setUser(user);
+        context.go('/home');
+      } else if (vm.error != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(vm.error!)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 

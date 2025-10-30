@@ -69,7 +69,11 @@ class DioClient {
               e.type == DioExceptionType.connectionError ||
               e.type == DioExceptionType.unknown ||
               e.type == DioExceptionType.connectionTimeout;
-          if (isWrite && isNetworkIssue) {
+
+          // Don't queue logout requests - they should fail immediately
+          final isLogout = e.requestOptions.path.contains('/logout');
+
+          if (isWrite && isNetworkIssue && !isLogout) {
             try {
               await OfflineQueueService.instance.add(
                 QueuedRequest(

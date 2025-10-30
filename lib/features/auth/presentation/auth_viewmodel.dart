@@ -14,7 +14,12 @@ class AuthViewModel extends BaseViewModel {
   dynamic _user; // Add a field to store the logged-in user
   dynamic get user => _user; // Add a getter for the user field
 
+  bool _isLoggingIn = false; // Prevent concurrent login attempts
+
   Future<bool> login(String phone, String pin) async {
+    if (_isLoggingIn) return false; // Prevent duplicate login calls
+    _isLoggingIn = true;
+
     setBusy(true);
     setError(null);
     try {
@@ -35,6 +40,7 @@ class AuthViewModel extends BaseViewModel {
       return false;
     } finally {
       setBusy(false);
+      _isLoggingIn = false;
     }
   }
 
@@ -47,10 +53,9 @@ class AuthViewModel extends BaseViewModel {
       final box = await Hive.openBox('user_data');
       box.put('group_id', user.group_id); // Store group_id
       box.put('member_id', user.id); // Store member_id
-      cb(user); // Call the original callback
       SessionManager.instance.setgroup_id(user.group_id); // Store group_id
       SessionManager.instance.setMemberId(user.id); // Store member_id
-      cb(user); // Call the original callback
+      cb(user); // Call the original callback ONCE
     };
   }
 

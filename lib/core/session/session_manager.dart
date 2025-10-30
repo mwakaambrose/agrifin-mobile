@@ -13,24 +13,32 @@ class SessionManager extends ChangeNotifier {
   int? get group_id => _group_id;
   int? get memberId => _memberId;
 
+  // Prevent notification storms during auth state changes
+  bool _isUpdating = false;
+
   void setAuthenticated(bool value) {
-    if (_isAuthenticated != value) {
+    if (_isAuthenticated != value && !_isUpdating) {
+      _isUpdating = true;
       _isAuthenticated = value;
-      notifyListeners();
+      // Defer notification to prevent immediate cascade
+      Future.microtask(() {
+        _isUpdating = false;
+        notifyListeners();
+      });
     }
   }
 
   void setgroup_id(int? value) {
     if (_group_id != value) {
       _group_id = value;
-      notifyListeners();
+      // Don't notify for non-auth changes to prevent unnecessary rebuilds
     }
   }
 
   void setMemberId(int? value) {
     if (_memberId != value) {
       _memberId = value;
-      notifyListeners();
+      // Don't notify for non-auth changes to prevent unnecessary rebuilds
     }
   }
 }

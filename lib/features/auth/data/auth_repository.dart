@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/exceptions.dart';
 import '../../../core/session/session_manager.dart';
+import '../../../core/offline/offline_queue.dart';
 import 'models/user.dart';
 
 extension _FirstOrNull<E> on Iterable<E> {
@@ -39,6 +40,10 @@ class AuthRepository {
 
       await _storage.write(key: 'auth_token', value: token);
       await DioClient().setToken(token);
+
+      // Clear offline queue to prevent replaying old logout requests
+      await OfflineQueueService.instance.clear();
+
       return (token, user);
     } on DioException catch (e) {
       String msg = 'Login failed';

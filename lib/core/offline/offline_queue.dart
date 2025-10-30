@@ -74,6 +74,12 @@ class OfflineQueueService {
     }
   }
 
+  Future<void> clear() async {
+    await init();
+    _queue.clear();
+    await _persist();
+  }
+
   Future<void> _persist() async {
     final box = await Hive.openBox(_boxName);
     final list = _queue.map((e) => jsonEncode(e.toJson())).toList();
